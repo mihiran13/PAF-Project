@@ -22,7 +22,7 @@ spring:
         registration:
           google:
             client-id: 
-            client-secret: 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
+            client-secret: 
             scope:
               - openid
               - profile
