@@ -1,0 +1,8 @@
+node_modules/
+target/
+.vite/
+dist/
+*.log
+.mvn/
+mvnw
+mvnw.cmd
