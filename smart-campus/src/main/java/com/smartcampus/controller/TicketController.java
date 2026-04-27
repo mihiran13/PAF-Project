@@ -153,4 +153,14 @@ public class TicketController {
         TicketResponse response = ticketService.rejectTicket(id, request, adminUser.getUser());
         return ResponseEntity.ok(ApiResponse.success("Ticket rejected successfully", response));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteTicket(
+            @PathVariable Long id,
+            @CurrentUser CustomUserDetails adminUser) {
+
+        ticketService.deleteTicket(id, adminUser.getUser());
+        return ResponseEntity.ok(ApiResponse.success("Ticket deleted successfully", null));
+    }
 }

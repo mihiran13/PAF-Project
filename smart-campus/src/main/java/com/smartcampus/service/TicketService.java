@@ -262,4 +262,16 @@ public class TicketService {
             return true;
         return ticket.getAssignedTechnician() != null && ticket.getAssignedTechnician().getId().equals(user.getId());
     }
+
+    public void deleteTicket(Long ticketId, User currentUser) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket", "id", ticketId));
+
+        if (currentUser.getRole() != UserRole.ADMIN) {
+            throw new ForbiddenException("Only admins can delete tickets");
+        }
+
+        ticketRepository.delete(ticket);
+        logger.info("Ticket {} deleted by admin {}", ticketId, currentUser.getId());
+    }
 }

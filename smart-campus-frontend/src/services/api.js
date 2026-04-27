@@ -65,7 +65,7 @@ export const ticketService = {
   updateStatus: (id, status) => http.patch(`/api/tickets/${id}/status`, { status }).then(r => r.data.data),
   resolve: (id, notes) => http.patch(`/api/tickets/${id}/resolve`, { resolutionNotes: notes }).then(r => r.data.data),
   reject: (id, reason) => http.patch(`/api/tickets/${id}/reject`, { rejectionReason: reason }).then(r => r.data.data),
-  delete: (id) => http.delete(`/api/tickets/${id}`)
+  delete: (id) => http.delete(`/api/tickets/${id}`).then(r => r.data.data)
 }
 
 export const commentService = {
