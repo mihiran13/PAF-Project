@@ -1,10 +1,13 @@
 package com.smartcampus.controller;
 
+import com.smartcampus.dto.request.UpdateProfileRequest;
 import com.smartcampus.dto.request.UpdateUserRoleRequest;
 import com.smartcampus.dto.response.ApiResponse;
 import com.smartcampus.dto.response.PagedResponse;
 import com.smartcampus.dto.response.UserResponse;
 import com.smartcampus.enums.UserRole;
+import com.smartcampus.security.CurrentUser;
+import com.smartcampus.security.CustomUserDetails;
 import com.smartcampus.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -60,5 +63,14 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> deactivateUser(@PathVariable Long id) {
         UserResponse deactivatedUser = userService.deactivateUser(id);
         return ResponseEntity.ok(ApiResponse.success("User deactivated successfully", deactivatedUser));
+    }
+
+    @PatchMapping("/me/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UserResponse>> updateMyProfile(
+            @Valid @RequestBody UpdateProfileRequest request,
+            @CurrentUser CustomUserDetails currentUser) {
+        UserResponse updatedUser = userService.updateMyProfile(currentUser.getUser().getId(), request);
+        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", updatedUser));
     }
 }

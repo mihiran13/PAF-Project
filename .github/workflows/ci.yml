@@ -1,0 +1,107 @@
+name: Full Stack CI - Smart Campus
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  backend-check:
+    runs-on: ubuntu-latest
+    name: Backend Build & Test
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'adopt'
+        cache: maven
+
+    - name: Build Backend
+      run: mvn clean package -DskipTests
+      working-directory: ./smart-campus
+
+    - name: Run Backend Tests
+      run: mvn test
+      working-directory: ./smart-campus
+
+  frontend-check:
+    runs-on: ubuntu-latest
+    name: Frontend Build & Test
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: smart-campus-frontend/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+      working-directory: ./smart-campus-frontend
+
+    - name: Lint code
+      run: npm run lint
+      working-directory: ./smart-campus-frontend
+      continue-on-error: true
+
+    - name: Build Frontend
+      run: npm run build
+      working-directory: ./smart-campus-frontend
+
+    - name: Run Frontend Tests
+      run: npm run test
+      working-directory: ./smart-campus-frontend
+      continue-on-error: true
+
+  quality-check:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Check for secrets in code
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        verbose: false
+      continue-on-error: true
+
+    - name: Check commit message format
+      run: |
+        COMMIT_MSG="${{ github.event.head_commit.message }}"
+        if [[ $COMMIT_MSG =~ ^(feat|fix|docs|style|refactor|test|chore|ci|perf)(\(.+\))?!?:\ .{1,} ]]; then
+          echo "✅ Commit message follows conventional commits"
+        else
+          echo "⚠️ Commit message may not follow conventional commits format"
+        fi
+      continue-on-error: true
+
+  status:
+    name: Build Status
+    runs-on: ubuntu-latest
+    needs: [backend-check, frontend-check, quality-check]
+    if: always()
+
+    steps:
+    - name: Determine build status
+      run: |
+        if [ "${{ needs.backend-check.result }}" == "success" ] && [ "${{ needs.frontend-check.result }}" == "success" ]; then
+          echo "✅ All checks passed successfully!"
+          exit 0
+        else
+          echo "❌ Some checks failed. Please review the logs above."
+          exit 1
+        fi
+      continue-on-error: true

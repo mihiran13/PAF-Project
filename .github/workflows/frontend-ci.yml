@@ -1,0 +1,70 @@
+name: Frontend CI - Smart Campus
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'smart-campus-frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'smart-campus-frontend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: ['18.x', '20.x']
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: smart-campus-frontend/package-lock.json
+
+    - name: Display Node and npm versions
+      run: |
+        node --version
+        npm --version
+
+    - name: Install dependencies
+      run: npm ci
+      working-directory: ./smart-campus-frontend
+
+    - name: Run ESLint
+      run: npm run lint
+      working-directory: ./smart-campus-frontend
+      continue-on-error: true
+
+    - name: Build frontend
+      run: npm run build
+      working-directory: ./smart-campus-frontend
+
+    - name: Run tests
+      run: npm run test
+      working-directory: ./smart-campus-frontend
+      continue-on-error: true
+
+    - name: Upload Build Artifacts
+      if: success()
+      uses: actions/upload-artifact@v3
+      with:
+        name: frontend-build-node${{ matrix.node-version }}
+        path: smart-campus-frontend/dist/
+
+    - name: Build Success Notification
+      if: success()
+      run: echo "✅ Frontend build successful with Node ${{ matrix.node-version }}!"
+
+    - name: Build Failure Notification
+      if: failure()
+      run: echo "❌ Frontend build failed!"

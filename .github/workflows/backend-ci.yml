@@ -1,0 +1,71 @@
+name: Backend CI - Smart Campus
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'smart-campus/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'smart-campus/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        java-version: ['17']
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up JDK ${{ matrix.java-version }}
+      uses: actions/setup-java@v3
+      with:
+        java-version: ${{ matrix.java-version }}
+        distribution: 'adopt'
+        cache: maven
+
+    - name: Display Java version
+      run: java -version
+
+    - name: Build with Maven
+      run: mvn clean package -DskipTests
+      working-directory: ./smart-campus
+
+    - name: Run Tests
+      run: mvn test
+      working-directory: ./smart-campus
+
+    - name: Generate Test Report
+      if: always()
+      run: mvn surefire-report:report
+      working-directory: ./smart-campus
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-backend
+        path: smart-campus/target/surefire-reports/
+
+    - name: Upload Build Artifacts
+      if: success()
+      uses: actions/upload-artifact@v3
+      with:
+        name: backend-build
+        path: smart-campus/target/*.jar
+
+    - name: Build Success Notification
+      if: success()
+      run: echo "✅ Backend build successful!"
+
+    - name: Build Failure Notification
+      if: failure()
+      run: echo "❌ Backend build failed!"
+      

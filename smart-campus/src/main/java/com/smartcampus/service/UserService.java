@@ -1,8 +1,10 @@
 package com.smartcampus.service;
 
+import com.smartcampus.dto.request.UpdateProfileRequest;
 import com.smartcampus.dto.response.PagedResponse;
 import com.smartcampus.dto.response.UserResponse;
 import com.smartcampus.enums.UserRole;
+import com.smartcampus.exception.BadRequestException;
 import com.smartcampus.exception.ResourceNotFoundException;
 import com.smartcampus.model.User;
 import com.smartcampus.repository.UserRepository;
@@ -71,6 +73,30 @@ public class UserService {
     public UserResponse deactivateUser(Long userId) {
         User user = getUserById(userId);
         user.setIsActive(false);
+        User savedUser = userRepository.save(user);
+        return UserResponse.fromEntity(savedUser);
+    }
+
+    @Transactional
+    public UserResponse updateMyProfile(Long userId, UpdateProfileRequest request) {
+        User user = getUserById(userId);
+
+        if (request.getName() != null && !request.getName().isBlank()) {
+            user.setName(request.getName().trim());
+        }
+
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            String newEmail = request.getEmail().trim();
+            if (!newEmail.equals(user.getEmail()) && userRepository.existsByEmail(newEmail)) {
+                throw new BadRequestException("Email is already in use");
+            }
+            user.setEmail(newEmail);
+        }
+
+        if (request.getProfileImageUrl() != null) {
+            user.setProfileImageUrl(request.getProfileImageUrl().trim().isEmpty() ? null : request.getProfileImageUrl().trim());
+        }
+
         User savedUser = userRepository.save(user);
         return UserResponse.fromEntity(savedUser);
     }

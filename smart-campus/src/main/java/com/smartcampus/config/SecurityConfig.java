@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(customAccessDeniedHandler) // 403
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/favicon.ico", "/error").permitAll()
                         .requestMatchers("/api/auth/**", "/oauth2/**", "/login/oauth2/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2

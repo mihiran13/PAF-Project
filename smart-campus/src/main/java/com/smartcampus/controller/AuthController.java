@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -93,6 +95,78 @@ public class AuthController {
         User user = currentUser.getUser();
         UserResponse response = UserResponse.fromEntity(user);
         return ResponseEntity.ok(ApiResponse.success("Current user retrieved", response));
+    }
+
+    @PostMapping("/google-login")
+    public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(@RequestBody Map<String, String> request) {
+        String googleToken = request.get("token");
+        
+        if (googleToken == null || googleToken.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Google token is required"));
+        }
+
+        // In production, validate the Google token with Google API
+        // For now, extract email from token claim (basic implementation)
+        // Note: This is a simplified implementation. In production, use Google's TokenVerifier
+        
+        try {
+            // Extract email from Google JWT (basic decode, not validated against Google)
+            // You should integrate with Google's TokenVerifier in production
+            String email = extractEmailFromGoogleToken(googleToken);
+            
+            User user = userRepository.findByEmail(email)
+                    .orElseGet(() -> {
+                        // Create new user if doesn't exist
+                        User newUser = User.builder()
+                                .email(email)
+                                .name(email.split("@")[0])
+                                .role(UserRole.USER)
+                                .isActive(true)
+                                .oauthId(email)
+                                .build();
+                        return userRepository.save(newUser);
+                    });
+
+            String jwt = tokenProvider.generateToken(user);
+            
+            AuthResponse authResponse = AuthResponse.builder()
+                    .accessToken(jwt)
+                    .tokenType("Bearer")
+                    .user(UserResponse.fromEntity(user))
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("Google login successful", authResponse));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("Invalid Google token: " + e.getMessage()));
+        }
+    }
+
+    private String extractEmailFromGoogleToken(String token) {
+        // Basic implementation: split JWT and decode payload
+        // In production, use proper JWT library and validate signature with Google's public key
+        try {
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                throw new RuntimeException("Invalid JWT format");
+            }
+            
+            // Decode payload (basic base64 decode)
+            byte[] decoded = java.util.Base64.getUrlDecoder().decode(parts[1]);
+            String payload = new String(decoded);
+            
+            // Extract email using simple string parsing (not ideal)
+            // In production, use a JSON parser
+            if (payload.contains("\"email\":\"")) {
+                int start = payload.indexOf("\"email\":\"") + 9;
+                int end = payload.indexOf("\"", start);
+                return payload.substring(start, end);
+            }
+            
+            throw new RuntimeException("Email not found in token");
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to extract email from token: " + e.getMessage());
+        }
     }
 
     @PostMapping("/logout")
